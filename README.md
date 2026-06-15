@@ -132,12 +132,12 @@ All evaluations are performed for **x4 super-resolution**. Border cropping is ap
 
 | Method    | Type                            | Trained by us | Epochs | Learning rate | Batch | Max train samples | Vimeo PSNR ↑ | Vimeo SSIM ↑ | REDS PSNR ↑ | REDS SSIM ↑ |
 | --------- | ------------------------------- | ------------- | -----: | ------------: | ----: | ----------------: | -----------: | -----------: | ----------: | ----------: |
-| Bicubic   | Interpolation baseline          | No            |      - |             - |     - |                 - |          TBD |          TBD |     26.5785 |      0.7626 |
+| Bicubic   | Interpolation baseline          | No            |      - |             - |     - |                 - |      29.9324 |       0.8544 |     26.5785 |      0.7626 |
 | SRCNN     | Frame-by-frame CNN              | Yes - Vimeo   |     20 |          1e-4 |     4 |              6206 |      31.4058 |       0.8783 |         TBD |         TBD |
 | EDSR-lite | Frame-by-frame residual CNN     | Yes - Vimeo   |     20 |          1e-4 |     4 |              6206 |      32.3560 |       0.9003 |         TBD |         TBD |
 | VSR-CNN   | Multi-frame CNN - 7 frames      | Yes - Vimeo   |     20 |          1e-4 |     4 |              3000 |      30.5926 |       0.8810 |         TBD |         TBD |
 | FSRCNN    | Frame-by-frame CNN              | Yes - Vimeo   |     20 |          1e-4 |     2 |              6206 |      30.6435 |       0.8617 |         TBD |         TBD |
-| ESPCN     | Frame-by-frame PixelShuffle CNN | Yes - Vimeo   |    TBD |           TBD |   TBD |               TBD |          TBD |          TBD |         TBD |         TBD |
+| ESPCN     | Frame-by-frame PixelShuffle CNN | Yes - Vimeo   |     20 |          1e-4 |     4 |              6206 |      30.6031 |       0.8663 |         TBD |         TBD |
 
 ---
 
@@ -251,12 +251,12 @@ The experimental pipeline produces:
 
 | Method    | Implemented |      Trained |   Evaluated |
 | --------- | ----------: | -----------: | ----------: |
-| Bicubic   |         Yes | Not required |   Partially |
-| SRCNN     |         Yes |          Yes |   Partially |
-| EDSR-lite |         Yes |          Yes |   Partially |
-| VSR-CNN   |         Yes |          Yes |   Partially |
-| FSRCNN    |         Yes |          Yes |   Partially |
-| ESPCN     |         Yes |  In progress | In progress |
+| Bicubic   |         Yes | Not required |   Yes       |
+| SRCNN     |         Yes |          Yes |   Yes       |
+| EDSR-lite |         Yes |          Yes |   Yes       |
+| VSR-CNN   |         Yes |          Yes |   Yes       |
+| FSRCNN    |         Yes |          Yes |   Yes       |
+| ESPCN     |         Yes |          Yes |   Yes       |
 
 Current completed highlights:
 
