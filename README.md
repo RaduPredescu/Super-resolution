@@ -1,241 +1,294 @@
 # Video Super-Resolution
 
-Project for the **Artificial Intelligence II: Deep Learning Methods** course.  
-Topic: **#23 Video Super-Resolution**
+This repository contains the implementation and experimental evaluation for a Video Super-Resolution project. The objective is to reconstruct high-resolution video frames from low-resolution inputs using classical interpolation, single-frame deep learning methods, and a multi-frame video super-resolution model.
 
-## 1. Project Description
+The project evaluates six super-resolution methods on two datasets: **Vimeo-90K** and **REDS**. It also includes transfer learning experiments and ablation studies to analyze the influence of temporal context, learning configuration, and pretrained initialization.
 
-The goal of this project is to study and compare deep learning methods for **Video Super-Resolution (VSR)**.
+---
 
-Video Super-Resolution aims to reconstruct high-resolution video frames from low-resolution input frames. Unlike single-image super-resolution, VSR can exploit temporal information from neighboring frames in order to recover more details and improve reconstruction quality.
+## Project Goal
 
-In this project, we focus on **x4 super-resolution**, where the input video frames are downsampled by a factor of 4 and the models must reconstruct the corresponding high-resolution frames.
+Video Super-Resolution aims to recover high-resolution frames from low-resolution video sequences. Unlike single-image super-resolution, video super-resolution can exploit temporal information from neighboring frames.
 
-## 2. Project Requirements
+In this project, we compare both frame-by-frame image super-resolution methods and multi-frame video super-resolution methods.
 
-According to the project requirements for topic #23, the project must include:
+The target task is **×4 super-resolution**.
 
-- Experiments on at least **2 datasets**
-- Comparison of at least **6 methods**
-- At least **3 methods trained by us**, either from scratch or using transfer learning
-- No direct usage of reported results from papers; all comparisons must be based on our own experiments
-- A study of the effect of **transfer learning from one dataset to another**
-- At least **3 ablation studies**
-- Implementation in Python, with **PyTorch mandatory**
-- A final report written in LaTeX, maximum 6 pages
-- A short final presentation based on the report
+---
 
-## 3. Selected Datasets
+## Datasets
 
-We selected the following datasets:
+### Vimeo-90K
 
-### 3.1 Vimeo-90K Septuplet
+Vimeo-90K is used as one of the main training and evaluation datasets. The project uses video septuplets, where each sample contains seven consecutive frames.
 
-Vimeo-90K is a widely used dataset for video restoration tasks, including video super-resolution.  
-We use the **septuplet** version, where each sample contains 7 consecutive video frames.
+For Vimeo-90K, the low-resolution frames are generated dynamically by bicubic downsampling from the high-resolution frames. The target frame is the center frame, `im4.png`.
 
-Expected usage:
+Current subset used in experiments:
 
-- High-resolution frames are used as ground truth
-- Low-resolution frames are generated through x4 downsampling
-- Used mainly for training and validation
+| Split | Number of samples |
+|---|---:|
+| Train | 6206 |
+| Test | 814 |
 
-### 3.2 REDS
+### REDS
 
-REDS is a video restoration dataset used for tasks such as video super-resolution and deblurring.
+REDS is used as the second dataset for training, evaluation, and transfer learning experiments.
 
-Expected usage:
+Unlike Vimeo-90K, REDS already provides bicubic low-resolution frames for ×4 super-resolution. The experiments use the high-resolution frames from `train_sharp` / `val_sharp` and the corresponding low-resolution frames from `train_sharp_bicubic/X4` / `val_sharp_bicubic/X4`.
 
-- `train_sharp` / `val_sharp` are used as high-resolution ground truth frames
-- `train_sharp_bicubic/X4` / `val_sharp_bicubic/X4` are used as low-resolution inputs
-- Used for training, validation, and transfer learning experiments
+---
 
-## 4. Task Definition
+## Methods
 
-Given a sequence of low-resolution frames:
+The project compares six methods:
 
-```text
-LR[t-k], ..., LR[t-1], LR[t], LR[t+1], ..., LR[t+k]
-```
-
-the model must reconstruct the high-resolution center frame:
-
-```text
-HR[t]
-```
-
-The main setting is:
-
-```text
-Scale factor: x4
-Input: multiple low-resolution neighboring frames
-Output: one reconstructed high-resolution frame
-```
-
-For frame-by-frame baselines, the model receives only one low-resolution frame and reconstructs the corresponding high-resolution frame.
-
-## 5. Methods to Compare
-
-We plan to compare at least 6 methods:
-
-| Method | Type | Trained by us |
+| Method | Type | Description |
 |---|---|---|
-| Bicubic interpolation | Classical baseline | No |
-| SRCNN frame-by-frame | CNN image super-resolution baseline | Yes |
-| EDSR-lite frame-by-frame | Residual CNN image super-resolution | Yes |
-| Simple VSR-CNN | Multi-frame video super-resolution model | Yes |
-| EDVR | Advanced video restoration / VSR model | Fine-tune or inference |
-| BasicVSR / BasicVSR++ | Advanced recurrent video super-resolution model | Fine-tune or inference |
+| Bicubic interpolation | Classical baseline | Non-learning interpolation baseline |
+| SRCNN | Frame-by-frame CNN | Early convolutional neural network for image super-resolution |
+| EDSR-lite | Frame-by-frame residual CNN | Lightweight residual super-resolution model |
+| VSR-CNN | Multi-frame VSR model | Uses multiple neighboring LR frames to reconstruct the HR center frame |
+| FSRCNN | Frame-by-frame CNN | Fast super-resolution CNN operating directly on LR input |
+| ESPCN | Frame-by-frame CNN | Efficient sub-pixel convolutional network using PixelShuffle upsampling |
 
-The first baseline, bicubic interpolation, provides a simple reference point.  
-SRCNN and EDSR-lite process each frame independently, while the VSR-CNN, EDVR, and BasicVSR-based approaches use temporal information from multiple frames.
+EDVR, BasicVSR, and BasicVSR++ are discussed in the report as related state-of-the-art video super-resolution methods, but the implemented experimental comparison focuses on the six methods above.
 
-## 6. Evaluation Metrics
+---
 
-The following metrics will be used:
+## Method Details
 
-- **PSNR** — Peak Signal-to-Noise Ratio
-- **SSIM** — Structural Similarity Index
-- Optional: **LPIPS** — perceptual similarity metric
+### Bicubic Interpolation
 
-The main quantitative comparison will be based on PSNR and SSIM.  
-Visual examples will also be included in the report to compare qualitative reconstruction results.
+Bicubic interpolation is used as the classical non-learning baseline. It requires no training and serves as the reference point for all neural models.
 
-## 7. Planned Ablation Studies
+### SRCNN
 
-We plan to include at least 3 ablation studies:
+SRCNN is a convolutional neural network applied frame-by-frame. The model receives a bicubic-upscaled low-resolution frame and predicts the high-resolution output.
 
-### 7.1 Number of Input Frames
+In this project, SRCNN is used for:
 
-We compare models using different temporal windows:
+- Training on Vimeo-90K.
+- Training directly on REDS.
+- Transfer learning from Vimeo-90K to REDS.
+- Comparing fine-tuned and non-fine-tuned models.
 
-- 1 frame
-- 3 frames
-- 5 frames
-- 7 frames, if computationally feasible
+### EDSR-lite
 
-This shows how much temporal information helps video super-resolution.
+EDSR-lite is a lightweight residual CNN inspired by EDSR. It removes batch normalization and uses residual blocks for improved reconstruction quality.
 
-### 7.2 Loss Function
+Unlike SRCNN, EDSR-lite receives the low-resolution image directly and performs learned upsampling internally.
 
-We compare different loss functions:
+### VSR-CNN
 
-- L1 loss
-- MSE loss
-- L1 loss + perceptual loss
+VSR-CNN is the main multi-frame video super-resolution model implemented in this project. It uses a sequence of neighboring low-resolution frames and reconstructs the high-resolution center frame.
 
-This helps analyze the influence of the training objective on reconstruction quality.
+The model supports different temporal input sizes:
 
-### 7.3 Transfer Learning Between Datasets
+| Variant | Input |
+|---|---|
+| VSR-CNN 1F | 1 frame |
+| VSR-CNN 3F | 3 frames |
+| VSR-CNN 5F | 5 frames |
+| VSR-CNN 7F | 7 frames |
 
-We study transfer learning in both directions:
+This allows the project to study whether temporal information improves reconstruction quality.
 
-- Train on Vimeo-90K, evaluate or fine-tune on REDS
-- Train on REDS, evaluate or fine-tune on Vimeo-90K
+### FSRCNN
 
-This is required by the project statement and helps evaluate how well the models generalize across datasets.
+FSRCNN is a fast CNN-based super-resolution method. It operates directly on the low-resolution input and performs upsampling at the end of the network.
 
-## 8. Repository Structure
+It is included as an efficient frame-by-frame neural baseline.
 
-Proposed project structure:
+### ESPCN
 
-```text
-video-super-resolution/
-├── data/
-│   ├── vimeo90k/
-│   └── REDS/
-├── src/
-│   ├── datasets.py
-│   ├── metrics.py
-│   ├── train_srcnn.py
-│   ├── train_edsr_lite.py
-│   ├── train_simple_vsr.py
-│   ├── evaluate.py
-│   ├── bicubic_baseline.py
-│   ├── compare_results.py
-│   └── models/
-│       ├── srcnn.py
-│       ├── edsr_lite.py
-│       └── simple_vsr.py
-├── configs/
-│   ├── srcnn.yaml
-│   ├── edsr_lite.yaml
-│   └── simple_vsr.yaml
-├── results/
-│   ├── images/
-│   ├── tables/
-│   └── checkpoints/
-├── report/
-├── requirements.txt
-└── README.md
-```
+ESPCN is an efficient sub-pixel convolutional network. It processes features in the low-resolution space and uses PixelShuffle for final upsampling.
 
-## 9. Dataset Preparation
+It is included as a lightweight frame-by-frame method suitable for image and video super-resolution.
 
-### 9.1 Vimeo-90K
+---
 
-Expected structure:
+## Experimental Setup
 
-```text
-data/
-└── vimeo90k/
-    ├── GT/
-    ├── sep_trainlist.txt
-    └── sep_testlist.txt
-```
+All neural methods are implemented in PyTorch.
 
-The `GT` folder should contain the original high-resolution frame sequences.  
-Low-resolution frames can be generated through x4 downsampling.
+The project evaluates models using:
 
-### 9.2 REDS
+| Metric | Meaning |
+|---|---|
+| PSNR | Peak Signal-to-Noise Ratio |
+| SSIM | Structural Similarity Index |
 
-Expected structure:
+Higher values are better for both metrics.
 
-```text
-data/
-└── REDS/
-    ├── train_sharp/
-    ├── train_sharp_bicubic/
-    │   └── X4/
-    ├── val_sharp/
-    └── val_sharp_bicubic/
-        └── X4/
-```
+Evaluation is performed at scale factor ×4. For metric computation, border cropping is applied according to the scale factor.
 
-## 10. First Implementation Milestone
+---
 
-The first milestone is to implement the full evaluation pipeline using bicubic interpolation:
+## Main Comparison
 
-1. Load HR video frames
-2. Generate or load LR x4 frames
-3. Upscale LR frames using bicubic interpolation
-4. Compare the output with HR ground truth
-5. Compute PSNR and SSIM
-6. Save visual examples
+The main comparison evaluates all six methods on Vimeo-90K and REDS.
 
-This baseline will be used as the reference for all deep learning methods.
+| Method | Vimeo PSNR | Vimeo SSIM | REDS PSNR | REDS SSIM |
+|---|---:|---:|---:|---:|
+| Bicubic | TBD | TBD | 26.5785 | 0.7626 |
+| SRCNN | 31.4058 | 0.8783 | TBD | TBD |
+| EDSR-lite | TBD | TBD | TBD | TBD |
+| VSR-CNN | TBD | TBD | TBD | TBD |
+| FSRCNN | TBD | TBD | TBD | TBD |
+| ESPCN | TBD | TBD | TBD | TBD |
 
-## 11. Expected Results
+Current confirmed results:
 
-We expect deep learning methods to outperform bicubic interpolation in terms of PSNR and SSIM.
+| Experiment | PSNR | SSIM |
+|---|---:|---:|
+| Bicubic on REDS | 26.5785 | 0.7626 |
+| SRCNN on Vimeo-90K | 31.4058 | 0.8783 |
 
-Frame-by-frame methods such as SRCNN and EDSR-lite should improve spatial detail reconstruction, while video-based methods such as Simple VSR-CNN, EDVR, and BasicVSR should further improve results by using temporal information from neighboring frames.
+The remaining values are filled after the corresponding model evaluations are completed.
 
-## 12. Technologies
+---
 
-Main technologies:
+## Transfer Learning
 
-- Python
-- PyTorch
-- NumPy
-- OpenCV
-- Pillow
-- scikit-image
-- Matplotlib
-- tqdm
+The project includes transfer learning from **Vimeo-90K to REDS**.
 
-## 13. Authors
+The main transfer learning experiment is performed with SRCNN:
 
-Project developed for the Artificial Intelligence II course, Mihai Modi and Predescu Radu
+| Experiment | Description |
+|---|---|
+| SRCNN Vimeo → REDS without fine-tuning | Model trained on Vimeo-90K and evaluated directly on REDS |
+| SRCNN REDS from scratch | Model trained directly on REDS |
+| SRCNN Vimeo → REDS fine-tuned | Model pretrained on Vimeo-90K and then fine-tuned on REDS |
 
-National University of Science and Technology POLITEHNICA Bucharest.
+This experiment analyzes whether pretraining on Vimeo-90K improves performance on REDS.
+
+### SRCNN Transfer Learning Results
+
+| Experiment | REDS PSNR | REDS SSIM |
+|---|---:|---:|
+| SRCNN Vimeo → REDS without fine-tuning | TBD | TBD |
+| SRCNN REDS from scratch | TBD | TBD |
+| SRCNN Vimeo → REDS fine-tuned | TBD | TBD |
+
+The fine-tuned SRCNN checkpoint was trained using a Vimeo-90K pretrained model and continued training on REDS.
+
+Final fine-tuning losses:
+
+| Model | Final train loss | Final validation loss |
+|---|---:|---:|
+| SRCNN Vimeo → REDS fine-tuned | 0.002837 | 0.001700 |
+
+The final reported comparison is based on PSNR and SSIM, not training loss.
+
+---
+
+## Ablation Studies
+
+The project includes three ablation studies.
+
+### 1. Temporal Context Ablation
+
+This ablation studies the effect of the number of input frames for VSR-CNN.
+
+| Model | Number of input frames | Vimeo PSNR | Vimeo SSIM |
+|---|---:|---:|---:|
+| VSR-CNN | 1 | TBD | TBD |
+| VSR-CNN | 3 | TBD | TBD |
+| VSR-CNN | 5 | TBD | TBD |
+| VSR-CNN | 7 | TBD | TBD |
+
+This experiment shows whether using neighboring video frames improves super-resolution performance compared to using only the center frame.
+
+### 2. Learning Rate Ablation
+
+This ablation studies the effect of different learning rates on VSR-CNN training.
+
+| Learning rate | Vimeo PSNR | Vimeo SSIM |
+|---:|---:|---:|
+| 1e-2 | TBD | TBD |
+| 1e-3 | TBD | TBD |
+| 1e-4 | TBD | TBD |
+| 1e-5 | TBD | TBD |
+
+The goal is to analyze training stability and reconstruction quality under different optimization settings.
+
+### 3. Transfer Learning Ablation
+
+This ablation studies the effect of pretrained initialization when transferring from Vimeo-90K to REDS.
+
+| Setup | Description | REDS PSNR | REDS SSIM |
+|---|---|---:|---:|
+| From scratch | Model trained directly on REDS | TBD | TBD |
+| No fine-tuning | Model trained on Vimeo-90K and evaluated on REDS | TBD | TBD |
+| Fine-tuning | Model trained on Vimeo-90K and then fine-tuned on REDS | TBD | TBD |
+
+This experiment measures whether pretraining on one dataset helps adaptation to another dataset.
+
+---
+
+## Expected Analysis
+
+The expected behavior is:
+
+- Bicubic interpolation should provide the lowest neural-free baseline.
+- SRCNN should improve over bicubic in most settings.
+- EDSR-lite should improve over SRCNN due to residual learning and learned upsampling.
+- VSR-CNN should benefit from temporal information when multiple frames are used.
+- FSRCNN and ESPCN should provide efficient frame-by-frame alternatives.
+- Fine-tuning from Vimeo-90K to REDS should improve REDS performance compared to direct cross-dataset evaluation without fine-tuning.
+
+---
+
+## Results Files
+
+Evaluation outputs are saved as summary files and per-frame metric CSV files.
+
+The main result artifacts are:
+
+| Output type | Description |
+|---|---|
+| Summary files | Mean PSNR and SSIM for each evaluated model |
+| CSV files | Per-frame PSNR and SSIM |
+| Example images | Visual comparisons between bicubic, model output, and HR target |
+| Checkpoints | Trained model weights |
+| TensorBoard logs | Training and validation loss curves |
+
+---
+
+## Project Status
+
+Current implemented methods:
+
+| Method | Implemented | Trained | Evaluated |
+|---|---:|---:|---:|
+| Bicubic | Yes | Not required | Partially |
+| SRCNN | Yes | Yes | Partially |
+| EDSR-lite | Yes | In progress | In progress |
+| VSR-CNN | Yes | In progress | In progress |
+| FSRCNN | Yes | In progress | In progress |
+| ESPCN | Yes | In progress | In progress |
+
+Current completed highlights:
+
+- REDS bicubic baseline evaluated.
+- SRCNN trained on Vimeo-90K.
+- SRCNN trained directly on REDS.
+- SRCNN fine-tuned from Vimeo-90K to REDS.
+- VSR-CNN, FSRCNN, and ESPCN added as additional comparison methods.
+
+---
+
+## Conclusion
+
+This project builds a complete experimental pipeline for video super-resolution using two datasets and six methods. It combines classical interpolation, frame-by-frame CNN models, and a custom multi-frame VSR-CNN model.
+
+The experiments are designed to evaluate:
+
+- Performance differences between classical and neural methods.
+- The benefit of residual and sub-pixel upsampling architectures.
+- The importance of temporal context in video super-resolution.
+- The effect of transfer learning from Vimeo-90K to REDS.
+- The sensitivity of model performance to training choices such as learning rate and number of input frames.
+
+Final conclusions will be drawn after all PSNR and SSIM results are collected.
