@@ -2,7 +2,7 @@
 
 This repository contains the implementation and experimental evaluation for a **Video Super-Resolution** project. The goal is to reconstruct high-resolution video frames from low-resolution inputs using classical interpolation, frame-by-frame neural super-resolution models, and a custom multi-frame video super-resolution model.
 
-The project evaluates six methods on two datasets: **Vimeo-90K** and **REDS**. It also includes transfer learning experiments and ablation studies.
+The project evaluates six methods on two datasets: **Vimeo-90K** and **REDS**. It also includes transfer learning experiments and ablation studies on temporal context, learning rate, and cross-dataset adaptation.
 
 ---
 
@@ -27,7 +27,7 @@ The project studies:
 
 ### Vimeo-90K
 
-Vimeo-90K is used as the main video super-resolution dataset. Each sample contains seven consecutive frames.
+Vimeo-90K is used as one of the main datasets. Each sample contains seven consecutive frames.
 
 For Vimeo-90K, the low-resolution inputs are generated dynamically by bicubic downsampling from the high-resolution frames. The target frame is the center frame, `im4.png`.
 
@@ -71,12 +71,12 @@ Bicubic interpolation is used as the classical baseline. It requires no training
 
 SRCNN is applied frame-by-frame. The low-resolution input is first upscaled with bicubic interpolation, and the CNN predicts the final high-resolution output.
 
-SRCNN is used for the main transfer learning experiment:
+SRCNN is used for:
 
-* trained on Vimeo-90K;
-* evaluated directly on REDS;
-* trained from scratch on REDS;
-* fine-tuned from Vimeo-90K to REDS.
+* training on Vimeo-90K;
+* training directly on REDS;
+* evaluating a Vimeo-trained model directly on REDS;
+* fine-tuning from Vimeo-90K to REDS.
 
 ### EDSR-lite
 
@@ -115,7 +115,7 @@ It is included as a lightweight frame-by-frame model suitable for image and vide
 
 ## Evaluation Metrics
 
-The models are evaluated using:
+The models are evaluated using **PSNR** and **SSIM**.
 
 | Metric | Meaning                     |
 | ------ | --------------------------- |
@@ -126,18 +126,58 @@ Higher values are better for both metrics.
 
 All evaluations are performed for **x4 super-resolution**. Border cropping is applied during metric computation according to the scale factor.
 
+The Mean Squared Error between the super-resolved image and the high-resolution target is computed as:
+
+$$
+\mathrm{MSE} = \frac{1}{HWC}
+\sum_{i=1}^{H}
+\sum_{j=1}^{W}
+\sum_{c=1}^{C}
+\left( I^{HR}*{i,j,c} - I^{SR}*{i,j,c} \right)^2
+$$
+
+The PSNR metric is computed as:
+
+$$
+\mathrm{PSNR} = 10 \log_{10}
+\left(
+\frac{MAX_I^2}{\mathrm{MSE}}
+\right)
+$$
+
+Since the images are normalized to the range $[0,1]$, $MAX_I = 1$, therefore:
+
+$$
+\mathrm{PSNR} = -10 \log_{10}(\mathrm{MSE})
+$$
+
+The SSIM metric is computed as:
+
+$$
+\mathrm{SSIM}(x,y) =
+\frac{
+(2\mu_x\mu_y + C_1)(2\sigma_{xy} + C_2)
+}{
+(\mu_x^2 + \mu_y^2 + C_1)(\sigma_x^2 + \sigma_y^2 + C_2)
+}
+$$
+
+where $I^{HR}$ is the ground-truth high-resolution image, $I^{SR}$ is the super-resolved image, $H$, $W$, and $C$ are the image height, width, and number of channels.
+
 ---
 
 ## Main Results
 
-| Method    | Type                            | Trained by us | Epochs | Learning rate | Batch | Max train samples | Vimeo PSNR ↑ | Vimeo SSIM ↑ | REDS PSNR ↑ | REDS SSIM ↑ |
-| --------- | ------------------------------- | ------------- | -----: | ------------: | ----: | ----------------: | -----------: | -----------: | ----------: | ----------: |
-| Bicubic   | Interpolation baseline          | No            |      - |             - |     - |                 - |      29.9324 |       0.8544 |     26.5785 |      0.7626 |
-| SRCNN     | Frame-by-frame CNN              | Yes - Vimeo   |     20 |          1e-4 |     4 |              6206 |      31.4058 |       0.8783 |         TBD |         TBD |
-| EDSR-lite | Frame-by-frame residual CNN     | Yes - Vimeo   |     20 |          1e-4 |     4 |              6206 |      32.3560 |       0.9003 |         TBD |         TBD |
-| VSR-CNN   | Multi-frame CNN - 7 frames      | Yes - Vimeo   |     20 |          1e-4 |     4 |              3000 |      30.5926 |       0.8810 |         TBD |         TBD |
-| FSRCNN    | Frame-by-frame CNN              | Yes - Vimeo   |     20 |          1e-4 |     2 |              6206 |      30.6435 |       0.8617 |         TBD |         TBD |
-| ESPCN     | Frame-by-frame PixelShuffle CNN | Yes - Vimeo   |     20 |          1e-4 |     4 |              6206 |      30.6031 |       0.8663 |         TBD |         TBD |
+The following table shows the main comparison between all six methods on Vimeo-90K and REDS.
+
+| Model     | Type                            | Trained by us | Epochs | Learning rate | Vimeo PSNR ↑ | Vimeo SSIM ↑ | REDS PSNR ↑ | REDS SSIM ↑ |
+| --------- | ------------------------------- | ------------- | -----: | ------------: | -----------: | -----------: | ----------: | ----------: |
+| Bicubic   | Interpolation baseline          | No            |    N/A |           N/A |      29.9324 |       0.8544 |     26.5785 |      0.7626 |
+| SRCNN     | Frame-by-frame CNN              | Yes           |     20 |          1e-4 |      31.4058 |       0.8783 |     27.6228 |      0.7972 |
+| EDSR-lite | Frame-by-frame residual CNN     | Yes           |     20 |          1e-4 |      32.3560 |       0.9003 |     28.3731 |      0.8242 |
+| VSR-CNN   | Multi-frame CNN                 | Yes           |     20 |          1e-4 |      30.5926 |       0.8810 |     28.1483 |      0.8149 |
+| FSRCNN    | Frame-by-frame CNN              | Yes           |     20 |          1e-4 |      30.6435 |       0.8617 |     27.1607 |      0.7802 |
+| ESPCN     | Frame-by-frame PixelShuffle CNN | Yes           |     20 |          1e-4 |      30.6031 |       0.8663 |     27.1563 |      0.7839 |
 
 ---
 
@@ -145,11 +185,18 @@ All evaluations are performed for **x4 super-resolution**. Border cropping is ap
 
 | Experiment                   |  PSNR ↑ | SSIM ↑ |
 | ---------------------------- | ------: | -----: |
+| Bicubic on Vimeo-90K         | 29.9324 | 0.8544 |
 | Bicubic on REDS              | 26.5785 | 0.7626 |
 | SRCNN on Vimeo-90K           | 31.4058 | 0.8783 |
+| SRCNN on REDS                | 27.6228 | 0.7972 |
 | EDSR-lite on Vimeo-90K       | 32.3560 | 0.9003 |
+| EDSR-lite on REDS            | 28.3731 | 0.8242 |
 | VSR-CNN 7-frame on Vimeo-90K | 30.5926 | 0.8810 |
+| VSR-CNN 7-frame on REDS      | 28.1483 | 0.8149 |
 | FSRCNN on Vimeo-90K          | 30.6435 | 0.8617 |
+| FSRCNN on REDS               | 27.1607 | 0.7802 |
+| ESPCN on Vimeo-90K           | 30.6031 | 0.8663 |
+| ESPCN on REDS                | 27.1563 | 0.7839 |
 
 ---
 
@@ -157,22 +204,16 @@ All evaluations are performed for **x4 super-resolution**. Border cropping is ap
 
 The project studies transfer learning from **Vimeo-90K to REDS**.
 
-| Model   | Training Setup               | REDS PSNR ↑ | REDS SSIM ↑ |
-| ------- | ---------------------------- | ----------: | ----------: |
-| SRCNN   | Vimeo → REDS, no fine-tuning |         TBD |         TBD |
-| SRCNN   | REDS from scratch            |         TBD |         TBD |
-| SRCNN   | Vimeo → REDS fine-tuned      |         TBD |         TBD |
-| VSR-CNN | Vimeo → REDS, no fine-tuning |         TBD |         TBD |
-| VSR-CNN | REDS from scratch            |         TBD |         TBD |
-| VSR-CNN | Vimeo → REDS fine-tuned      |         TBD |         TBD |
+| Model   | Training setup                 | REDS PSNR ↑ | REDS SSIM ↑ |
+| ------- | ------------------------------ | ----------: | ----------: |
+| SRCNN   | Train Vimeo, evaluate REDS     |     27.6693 |      0.7991 |
+| SRCNN   | REDS from scratch              |     27.6228 |      0.7972 |
+| SRCNN   | Vimeo → REDS transfer learning |     27.8155 |      0.8032 |
+| VSR-CNN | Train Vimeo, evaluate REDS     |     28.2629 |      0.8223 |
+| VSR-CNN | REDS from scratch              |     28.1483 |      0.8149 |
+| VSR-CNN | Vimeo → REDS transfer learning |     28.5620 |      0.8299 |
 
-The SRCNN fine-tuned model was initialized from a Vimeo-90K checkpoint and then trained further on REDS.
-
-| Model                         | Final train loss | Final validation loss |
-| ----------------------------- | ---------------: | --------------------: |
-| SRCNN Vimeo → REDS fine-tuned |         0.002837 |              0.001700 |
-
-The final comparison is based on PSNR and SSIM, not on training loss.
+The transfer learning results show that fine-tuning a Vimeo-trained model on REDS improves performance compared to both direct cross-dataset evaluation and REDS training from scratch.
 
 ---
 
@@ -197,10 +238,10 @@ This ablation studies the effect of different learning rates on VSR-CNN training
 
 | Model   | Dataset | Learning rate |  PSNR ↑ | SSIM ↑ |
 | ------- | ------- | ------------: | ------: | -----: |
+| VSR-CNN | Vimeo   |          1e-2 |     TBD |    TBD |
 | VSR-CNN | Vimeo   |          1e-3 |     TBD |    TBD |
 | VSR-CNN | Vimeo   |          1e-4 | 30.5926 | 0.8810 |
 | VSR-CNN | Vimeo   |          1e-5 |     TBD |    TBD |
-| VSR-CNN | Vimeo   |          1e-2 |     TBD |    TBD |
 
 The goal is to analyze training stability and reconstruction quality under different optimization settings.
 
@@ -210,11 +251,14 @@ The goal is to analyze training stability and reconstruction quality under diffe
 
 This ablation studies the effect of pretrained initialization when transferring from Vimeo-90K to REDS.
 
-| Setup          | Description                                            | REDS PSNR ↑ | REDS SSIM ↑ |
-| -------------- | ------------------------------------------------------ | ----------: | ----------: |
-| From scratch   | Model trained directly on REDS                         |         TBD |         TBD |
-| No fine-tuning | Model trained on Vimeo-90K and evaluated on REDS       |         TBD |         TBD |
-| Fine-tuning    | Model trained on Vimeo-90K and then fine-tuned on REDS |         TBD |         TBD |
+| Model   | Setup                      | REDS PSNR ↑ | REDS SSIM ↑ |
+| ------- | -------------------------- | ----------: | ----------: |
+| SRCNN   | REDS from scratch          |     27.6228 |      0.7972 |
+| SRCNN   | Train Vimeo, evaluate REDS |     27.6693 |      0.7991 |
+| SRCNN   | Vimeo → REDS fine-tuned    |     27.8155 |      0.8032 |
+| VSR-CNN | REDS from scratch          |     28.1483 |      0.8149 |
+| VSR-CNN | Train Vimeo, evaluate REDS |     28.2629 |      0.8223 |
+| VSR-CNN | Vimeo → REDS fine-tuned    |     28.5620 |      0.8299 |
 
 This experiment measures whether pretraining on one dataset helps the model adapt to another dataset.
 
@@ -222,14 +266,14 @@ This experiment measures whether pretraining on one dataset helps the model adap
 
 ## Expected Observations
 
-The expected behavior is:
+The obtained results show the following trends:
 
 * Bicubic interpolation provides the classical non-learning baseline.
-* Neural models should generally improve over bicubic interpolation.
-* EDSR-lite is expected to outperform SRCNN due to residual learning and learned upsampling.
-* VSR-CNN is expected to benefit from neighboring frames when temporal information is useful.
-* FSRCNN and ESPCN provide efficient frame-by-frame alternatives.
-* Fine-tuning from Vimeo-90K to REDS is expected to improve REDS performance compared to direct cross-dataset evaluation without fine-tuning.
+* Neural methods improve over bicubic interpolation on REDS.
+* EDSR-lite obtains the best REDS result among the frame-by-frame methods.
+* VSR-CNN obtains the best REDS result after transfer learning.
+* FSRCNN and ESPCN provide efficient frame-by-frame alternatives, but their REDS results are lower than SRCNN and EDSR-lite in this setup.
+* Transfer learning from Vimeo-90K to REDS improves both SRCNN and VSR-CNN performance.
 
 ---
 
@@ -237,37 +281,39 @@ The expected behavior is:
 
 The experimental pipeline produces:
 
-| Artifact         | Description                                                    |
-| ---------------- | -------------------------------------------------------------- |
-| Summary files    | Mean PSNR and SSIM for each evaluated model                    |
-| CSV files        | Per-frame PSNR and SSIM                                        |
-| Example images   | Visual comparison between bicubic, model output, and HR target |
-| Checkpoints      | Trained model weights                                          |
-| TensorBoard logs | Training and validation loss curves                            |
+| Artifact         | Description                                          |
+| ---------------- | ---------------------------------------------------- |
+| Summary files    | Mean PSNR and SSIM for each evaluated model          |
+| CSV files        | Per-frame PSNR and SSIM                              |
+| Example images   | Visual comparison between model output and HR target |
+| Checkpoints      | Trained model weights                                |
+| TensorBoard logs | Training and validation loss curves                  |
+
+Example images are generated during evaluation and saved in the corresponding `results/.../examples/` folder. These images are used for qualitative comparison between the reconstructed super-resolved output and the high-resolution ground truth.
 
 ---
 
 ## Project Status
 
-| Method    | Implemented |      Trained |   Evaluated |
-| --------- | ----------: | -----------: | ----------: |
-| Bicubic   |         Yes | Not required |   Yes       |
-| SRCNN     |         Yes |          Yes |   Yes       |
-| EDSR-lite |         Yes |          Yes |   Yes       |
-| VSR-CNN   |         Yes |          Yes |   Yes       |
-| FSRCNN    |         Yes |          Yes |   Yes       |
-| ESPCN     |         Yes |          Yes |   Yes       |
+| Method    | Implemented |      Trained | Evaluated |
+| --------- | ----------: | -----------: | --------: |
+| Bicubic   |         Yes | Not required |       Yes |
+| SRCNN     |         Yes |          Yes |       Yes |
+| EDSR-lite |         Yes |          Yes |       Yes |
+| VSR-CNN   |         Yes |          Yes |       Yes |
+| FSRCNN    |         Yes |          Yes |       Yes |
+| ESPCN     |         Yes |          Yes |       Yes |
 
 Current completed highlights:
 
 * REDS bicubic baseline evaluated.
-* SRCNN trained on Vimeo-90K.
-* SRCNN trained directly on REDS.
-* SRCNN fine-tuned from Vimeo-90K to REDS.
-* EDSR-lite trained and evaluated on Vimeo-90K.
-* VSR-CNN trained and evaluated on Vimeo-90K with 7 input frames.
-* FSRCNN trained and evaluated on Vimeo-90K.
-* ESPCN added as the sixth method.
+* SRCNN trained and evaluated on Vimeo-90K and REDS.
+* SRCNN transfer learning from Vimeo-90K to REDS completed.
+* EDSR-lite trained and evaluated on Vimeo-90K and REDS.
+* VSR-CNN trained and evaluated on Vimeo-90K and REDS.
+* VSR-CNN transfer learning from Vimeo-90K to REDS completed.
+* FSRCNN trained and evaluated on Vimeo-90K and REDS.
+* ESPCN trained and evaluated on Vimeo-90K and REDS.
 
 ---
 
@@ -275,7 +321,7 @@ Current completed highlights:
 
 This project builds a complete experimental pipeline for video super-resolution using two datasets and six methods. It combines classical interpolation, frame-by-frame CNN models, residual CNN models, sub-pixel convolutional models, and a custom multi-frame VSR-CNN model.
 
-The experiments are designed to evaluate:
+The experiments evaluate:
 
 * the difference between classical and neural super-resolution;
 * the effect of residual learning and learned upsampling;
@@ -283,4 +329,4 @@ The experiments are designed to evaluate:
 * the impact of transfer learning from Vimeo-90K to REDS;
 * the sensitivity of VSR-CNN to learning rate and number of input frames.
 
-Final conclusions will be drawn after all PSNR and SSIM results are collected.
+The best REDS result obtained in the current experiments is achieved by **VSR-CNN with Vimeo → REDS transfer learning**, reaching **28.5620 PSNR** and **0.8299 SSIM**.

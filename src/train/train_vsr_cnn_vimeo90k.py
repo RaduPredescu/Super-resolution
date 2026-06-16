@@ -36,6 +36,16 @@ def get_centered_frame_indices(num_frames: int) -> list[int]:
     return list(range(center - half, center + half + 1))
 
 
+class CharbonnierLoss(nn.Module):
+    def __init__(self, eps=1e-6):
+        super().__init__()
+        self.eps = eps
+
+    def forward(self, pred, target):
+        diff = pred - target
+        loss = torch.sqrt(diff * diff + self.eps)
+        return loss.mean()
+
 class SimpleVSRVimeoDataset(Dataset):
     def __init__(
         self,
@@ -341,7 +351,7 @@ def main() -> None:
         num_blocks=args.num_blocks,
     ).to(device)
 
-    criterion = nn.L1Loss()
+    criterion = CharbonnierLoss()
     optimizer = optim.Adam(model.parameters(), lr=args.lr)
 
     write_config_to_tensorboard(
